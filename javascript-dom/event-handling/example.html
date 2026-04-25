@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Events Deep Dive</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    #outer  { padding: 30px; background: #fdd; }
+    #middle { padding: 30px; background: #dfd; }
+    #inner  { padding: 10px; }
+    .log    { background: #111; color: #0f0; padding: 10px; height: 180px;
+              overflow-y: auto; font-family: monospace; font-size: 12px;
+              margin-top: 1rem; }
+    li.done { text-decoration: line-through; color: #888; }
+    li      { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Bubbling demo — click the button</h2>
+  <div id="outer">
+    outer
+    <div id="middle">
+      middle
+      <button id="inner">inner button</button>
+    </div>
+  </div>
+
+  <h2>Delegation demo — click items to toggle, × to delete</h2>
+  <ul id="todos">
+    <li>Buy milk <button class="del">×</button></li>
+    <li>Walk the dog <button class="del">×</button></li>
+    <li>Learn DOM <button class="del">×</button></li>
+  </ul>
+  <button id="add-todo">Add todo</button>
+
+  <div class="log" id="log"></div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const log = (msg) => {
+      logEl.innerHTML += `<div>${msg}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    // --- Bubbling demo ---
+    ['outer', 'middle', 'inner'].forEach(id => {
+      document.getElementById(id).addEventListener('click', (e) => {
+        log(`bubble — listener on #${e.currentTarget.id}, target: #${e.target.id}`);
+      });
+    });
+
+    // Hold Shift while clicking inner to stop propagation
+    document.getElementById('inner').addEventListener('click', (e) => {
+      if (e.shiftKey) {
+        e.stopPropagation();
+        log('⛔ stopPropagation() — outer/middle will NOT fire');
+      }
+    });
+
+    // --- Delegation demo ---
+    const list = document.getElementById('todos');
+
+    list.addEventListener('click', (e) => {
+      // Delete button? Remove the whole <li>
+      if (e.target.matches('.del')) {
+        e.stopPropagation();               // don't also toggle "done"
+        const li = e.target.closest('li');
+        log(`delete → "${li.firstChild.textContent.trim()}"`);
+        li.remove();
+        return;
+      }
+
+      // Otherwise, toggle the <li>
+      const li = e.target.closest('li');
+      if (li && list.contains(li)) {
+        li.classList.toggle('done');
+        log(`toggle → "${li.firstChild.textContent.trim()}"`);
+      }
+    });
+
+    // Add a new todo — delegation handles it automatically
+    let n = 4;
+    document.getElementById('add-todo').addEventListener('click', () => {
+      const li = document.createElement('li');
+      li.innerHTML = `Todo #${n++} <button class="del">×</button>`;
+      list.append(li);
+      log('added new todo');
+    });
+  </script>
+</body>
+</html>
